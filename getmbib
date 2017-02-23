@@ -1,8 +1,8 @@
 #!/bin/bash
 version=1.0
 # Script created by Geri O. Morales, based on a script I found on stackoverblow
-# (I have lost the source). For usage examples see (link to the corresponding
-# blog post)
+# (I have lost the source). For usage examples see:
+# http://bluesimplex.com/2017/02/23/automatically_download_latex_bibliographies_from_mathscinet.html
 
 BIBFILE=$2".bib"
 LOGFILE=$1".log"
