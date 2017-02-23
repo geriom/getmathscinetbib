@@ -4,15 +4,26 @@ version=1.0
 # (I have lost the source). For usage examples see (link to the corresponding
 # blog post)
 
+BIBFILE=$2".bib"
+LOGFILE=$1".log"
+
+# Test if you have access to MathSciNet
+wget -q http://www.ams.org/mathscinet/search/publications.html >> /dev/null
+if [ $? -ne 0 ]; then
+    echo "It seems that you don't have access to MathSciNet"
+    exit
+fi
+
+
 mathscinet_bibtex () {
-    tsocks wget \
+    wget \
     "http://www.ams.org/mathscinet/search/publications.html?fmt=bibtex&pg1=MR&s1=$1" \
     -q -O - | grep "<pre>" -A 1000 | sed -n -e '1,/\/pre/p' | grep -v "pre>"
     
 }
 
 array_contains () { 
-    local array="$1[@]"
+    local array="$1[@]" 
     local seeking=$2
     local in=1
     for element in "${!array}"; do
@@ -24,35 +35,23 @@ array_contains () {
     return $in
 }
 
-echo "Retrieving bibliographies from MathScient..."
+echo "Retrieving bibliographies from MathScinet..."
 index=0
 bibcounter=0
 bibitems=('empty')
 
-if [ "$1" = "-b" ]; then
-    shift
-    for missing in $(xml_grep 'bcf:citekey' $1".bcf" --text_only); do
-        if !(array_contains bibitems $missing ); then
-            if [[ "$missing" == MR* ]]; then
-    	        mathscinet_bibtex $missing >> $2".bib"
-                echo "item ${missing} added"
-                bibcounter=$((bibcounter + 1))
-            fi
-        fi
-        bibitems[$index]=$missing
-        index=$((index + 1))
-    done
-else
-    for missing in $(grep -oh '\w*MR\w*' $1".tex"); do
-        if !(array_contains bibitems $missing ); then
-    	    mathscinet_bibtex $missing >> $2".bib"
-            echo "item ${missing} added"
-            bibcounter=$((bibcounter + 1))
-        fi
-        bibitems[$index]=$missing
-        index=$((index + 1))
-    done
-fi
+for missing in $(grep -oh '\w*MR\w*' $LOGFILE); do
+    if !(array_contains bibitems $missing ); then
+	    mathscinet_bibtex $missing >> $BIBFILE
+        #fixing bug in matscinet that sometimes deletes the first 0
+        trimmedid=$(echo "$missing" | sed 's/\(MR\)0\(\w*\)\+/\1\2/')
+        sed -i "s/$trimmedid/$missing/g" $BIBFILE
+        echo "item ${missing} added"
+        bibcounter=$((bibcounter + 1))
+    fi
+    bibitems[$index]=$missing
+    index=$((index + 1))
+done
 
-echo "... Done! ${bibcounter} bibliography sources added to ${2}.bib"
+echo "... Done! ${bibcounter} bibliography sources added to $BIBFILE"
 
