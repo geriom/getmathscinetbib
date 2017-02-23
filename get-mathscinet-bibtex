@@ -1,2 +1,0 @@
-#!/bin/bash
-wget "http://www.ams.org/mathscinet/search/publications.html?fmt=bibtex&pg1=MR&s1=$1" -q -O - | grep "<pre>" -A 1000 | sed -n -e '1,/\/pre/p' | grep -v "pre>"

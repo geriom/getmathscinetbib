@@ -4,6 +4,13 @@ version=1.0
 # (I have lost the source). For usage examples see (link to the corresponding
 # blog post)
 
+mathscinet_bibtex () {
+    tsocks wget \
+    "http://www.ams.org/mathscinet/search/publications.html?fmt=bibtex&pg1=MR&s1=$1" \
+    -q -O - | grep "<pre>" -A 1000 | sed -n -e '1,/\/pre/p' | grep -v "pre>"
+    
+}
+
 array_contains () { 
     local array="$1[@]"
     local seeking=$2
@@ -17,25 +24,35 @@ array_contains () {
     return $in
 }
 
-# for missing in `grep 'MR' $1`; do
 echo "Retrieving bibliographies from MathScient..."
 index=0
 bibcounter=0
 bibitems=('empty')
-# "xml_grep" is provided by the "xml-twig-tools" package
-for missing in $(xml_grep 'bcf:citekey' $1 --text_only); do
-    if !(array_contains bibitems $missing ); then
-	    get-mathscinet-bibtex $missing >> $2
-        echo "item ${missing} added"
-        bibcounter=$((bibcounter + 1))
-    fi
-    bibitems[$index]=$missing
-    index=$((index + 1))
-done
 
-echo "... Done! ${bibcounter} bibliography sources added to ${2}"
+if [ "$1" = "-b" ]; then
+    shift
+    for missing in $(xml_grep 'bcf:citekey' $1".bcf" --text_only); do
+        if !(array_contains bibitems $missing ); then
+            if [[ "$missing" == MR* ]]; then
+    	        mathscinet_bibtex $missing >> $2".bib"
+                echo "item ${missing} added"
+                bibcounter=$((bibcounter + 1))
+            fi
+        fi
+        bibitems[$index]=$missing
+        index=$((index + 1))
+    done
+else
+    for missing in $(grep -oh '\w*MR\w*' $1".tex"); do
+        if !(array_contains bibitems $missing ); then
+    	    mathscinet_bibtex $missing >> $2".bib"
+            echo "item ${missing} added"
+            bibcounter=$((bibcounter + 1))
+        fi
+        bibitems[$index]=$missing
+        index=$((index + 1))
+    done
+fi
 
-# Other possibilities I explored:
+echo "... Done! ${bibcounter} bibliography sources added to ${2}.bib"
 
-# for missing in $1; do
-# for missing in `bibtex $1 | grep "database entry for \"MR" | sed -e s/.*\"MR// | sed -e s/\"//`; do
