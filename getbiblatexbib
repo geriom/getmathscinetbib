@@ -1,0 +1,41 @@
+#!/bin/bash
+version=1.0
+# Script created by Geri O. Morales, based on a script I found on stackoverblow
+# (I have lost the source). For usage examples see (link to the corresponding
+# blog post)
+
+array_contains () { 
+    local array="$1[@]"
+    local seeking=$2
+    local in=1
+    for element in "${!array}"; do
+        if [[ $element == $seeking ]]; then
+            in=0
+            break
+        fi
+    done
+    return $in
+}
+
+# for missing in `grep 'MR' $1`; do
+echo "Retrieving bibliographies from MathScient..."
+index=0
+bibcounter=0
+bibitems=('empty')
+# "xml_grep" is provided by the "xml-twig-tools" package
+for missing in $(xml_grep 'bcf:citekey' $1 --text_only); do
+    if !(array_contains bibitems $missing ); then
+	    get-mathscinet-bibtex $missing >> $2
+        echo "item ${missing} added"
+        bibcounter=$((bibcounter + 1))
+    fi
+    bibitems[$index]=$missing
+    index=$((index + 1))
+done
+
+echo "... Done! ${bibcounter} bibliography sources added to ${2}"
+
+# Other possibilities I explored:
+
+# for missing in $1; do
+# for missing in `bibtex $1 | grep "database entry for \"MR" | sed -e s/.*\"MR// | sed -e s/\"//`; do
